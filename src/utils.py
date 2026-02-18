@@ -3,6 +3,8 @@ import sys
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.metrics import r2_score
+from sklearn.model_selection import RandomizedSearchCV
 from src.exception import CustomException
 
 def save_object(file_path, obj):
@@ -13,5 +15,35 @@ def save_object(file_path, obj):
         with open(file_path, 'wb') as file_obj:
             pickle.dump(obj, file_obj)
 
+    except Exception as e:
+        raise CustomException(e, sys)
+    
+def evaluate_models(X_train, y_train, X_test, y_test, models, param_grid):
+    try:
+        report = {}
+
+        for i in range(len(models)):
+            model = list(models.values())[i]
+            param = list(param_grid.values())[i]
+            random_search = RandomizedSearchCV(
+                estimator=model,
+                param_distributions=param,
+                cv=3,
+                scoring='r2'
+            )
+
+            random_search.fit(X_train, y_train)
+            best_model = random_search.best_estimator_   
+            
+            y_train_pred = best_model.predict(X_train)
+            y_test_pred = best_model.predict(X_test)
+
+            train_model_score = r2_score(y_train, y_train_pred)
+            test_model_score = r2_score(y_test, y_test_pred)
+
+            report[list(models.keys())[i]] = test_model_score
+
+        return report, best_model
+    
     except Exception as e:
         raise CustomException(e, sys)
